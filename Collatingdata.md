@@ -26,6 +26,95 @@ $$Hash[l\cdots r]=(Hash[r]-Hash[l]*P^{^{r-l+1}})+MOD)\%MOD \left ( l\subseteq [1
 
 [2005年国家集训队论文-杨弋《Hash在信息学竞赛中的一类应用》(参见附件)](https://wenku.baidu.com/view/6bfad1d8d15abe23482f4d7f.html) 
 
+**模板代码**
+
+```c++
+struct StringHash {
+	const int Speed = 1331; //基数，素数为优
+	ULL Hash[MAX]; //前缀哈希值
+	void GetHash(char *str) { //初始化前缀哈希值
+		for (int i = 0,len=strlen(str); i < len; i++) {
+			Hash[i] = i ? (Hash[i-1]*Speed+str[i]) : (str[i]);
+		}
+	}
+	ULL PowMod(ULL a, ULL x) { 
+		ULL result = 1;
+		for (; x; x >>= 1, a *= a) {
+			if (x & 1) result *= a;
+		}
+		return result;
+	}
+	ULL GetHashValue(int l, int r) { //求子串str[l...r]的哈希值
+		return l ? Hash[r] - Hash[l - 1] * PowMod(Speed, r - l + 1) : Hash[r];
+	}
+};
+```
+
+**经典题目**
+
+POJ-3461——[Oulipo](http://poj.org/problem?id=3461)
+
+题意：给定2个字符p和t。问p在t中出现几次
+
+分析：求出p整体的哈希值于t中每个长度为|p|的子串的哈希值比较即可。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <functional>
+using namespace std;
+typedef long long int LL;
+typedef unsigned long long int ULL; //unsigned自然溢出
+const int MAX = 1e6+24; //字符串长度
+struct StringHash {
+	const int Speed = 1331; //基数，素数为优
+	ULL Hash[MAX]; //前缀哈希值
+	void GetHash(char *str) { //初始化前缀哈希值
+		for (int i = 0,len=strlen(str); i < len; i++) {
+			Hash[i] = i ? (Hash[i-1]*Speed+str[i]) : (str[i]);
+		}
+	}
+	ULL PowMod(ULL a, ULL x) { 
+		ULL result = 1;
+		for (; x; x >>= 1, a *= a) {
+			if (x & 1) result *= a;
+		}
+		return result;
+	}
+	ULL GetHashValue(int l, int r) { //求子串str[l...r]的哈希值
+		return l ? Hash[r] - Hash[l - 1] * PowMod(Speed, r - l + 1) : Hash[r];
+	}
+};
+char P[MAX], T[MAX];
+StringHash shp, sht;
+int Count(char *p, char *t) {
+	shp.GetHash(p); sht.GetHash(t);
+	int lenp = strlen(p), lent = strlen(t),result=0;
+	ULL hashP = shp.GetHashValue(0, lenp - 1);
+	for (int i = 0; i <= lent - lenp; i++) {
+		if (hashP ==sht.GetHashValue(i,i+lenp-1)) {
+			result++;
+		}
+	}
+	return result;
+}
+int main() {
+	int t;
+	scanf("%d", &t);
+	while (t--) {
+		scanf("%s%s", P,T);
+		printf("%d\n",Count(P,T));
+	}
+	return 0;
+}
+```
+
+
+
 ### BM算法(Boyer-Moore)
 
 Boyer-Moore算法是一种基于后缀匹配的模式串匹配算法，后缀匹配就是模式串从右到左开始比较，但模式串的移动还是从左到右的。字符串匹配的关键就是模式串的如何移动才是最高效的，Boyer-Moore为了做到这点定义了两个规则：坏字符规则和好后缀规则，下面图解给出定义：
@@ -67,6 +156,8 @@ Boyer-Moore算法是一种基于后缀匹配的模式串匹配算法，后缀匹
 3.模式串中没有子串匹配上后后缀，并且在模式串中找不到最长前缀，让该前缀等于好后缀的后缀。此时，直接移动模式到好后缀的下一个字符。
 
 ![BM-6](C:\Users\Administrator\Desktop\BM-6.png)
+
+
 
 ### Sunday算法
 
@@ -117,6 +208,100 @@ D的第j位为1的时候（此时成$D[j]$是活动的），表示模式串前�
 **推荐阅读：** 
 
 [令人惊叹的Shift-And/Shift-Or](http://www.iteye.com/topic/1130001) 
+
+**算法模板**
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+void preprocess(unsigned int B[], string T, int n)
+{
+    unsigned int shift=1;
+    for (int i=0; i<n; i++) {
+        B[T[i]] |= shift;
+        shift <<= 1;
+    }
+}
+
+vector<int> and_match(string S, string T)
+{ //求T在S中出现的位置
+    int m=S.length(), n=T.length();
+    unsigned int B[256], D=0, mask;
+    for (int i=0; i<256; i++)
+        B[i] = 0;
+    preprocess(B, T, n);
+    vector<int> res;
+
+    mask  = 1 << (n - 1);
+    for (int i=0; i<m; i++) {
+        D = (D << 1 | 1) & B[S[i]];
+        if (D & mask)
+            res.push_back(i-n+1);
+    }
+
+    return res;
+}
+
+int main()
+{
+    string S, T;
+    cin >> S >> T;
+    vector<int> res=and_match(S,T);
+    for (vector<int>::iterator it=res.begin(); it!=res.end(); ++it)
+        cout << *it << endl;
+    return 0;
+}
+```
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+void preprocess(unsigned int B[], string T, int n)
+{
+    unsigned int shift=1;
+    for (int i=0; i<n; i++) {
+        B[T[i]] &= ~shift; // right bit is set to "0"
+        shift <<= 1;
+    }
+}
+
+vector<int> or_match(string S, string T)
+{ //求T在S中出现的位置
+    int m=S.length(), n=T.length();
+    unsigned int B[256], D=~0, mask;
+    for (int i=0; i<256; i++)
+        B[i] = ~0; // every bit is set to "1"
+    preprocess(B, T, n);
+    vector<int> res;
+
+    mask  = ~(1 << (n - 1));
+    for (int i=0; i<m; i++) {
+        D = (D << 1) | B[S[i]];
+        if (~(D | mask))
+            res.push_back(i-n+1);
+    }
+
+    return res;
+}
+
+int main()
+{
+    string S, T;
+    cin >> S >> T;
+    vector<int> res=or_match(S,T);
+    for (vector<int>::iterator it=res.begin(); it!=res.end(); ++it)
+        cout << *it << endl;
+    return 0;
+}
+```
+
+
 
 ### KMP算法(Knuth-Morris-Pratt)
 
@@ -213,6 +398,71 @@ next 数组的求解基于 **“真前缀”** 和**“真后缀”**，即$next
 
 [KMP算法(2)](https://61mon.com/index.php/archives/192/)
 
+**模板代码**
+
+```c++
+namespace KMP {
+	int Next[MAX];
+	void GetNext(char *str) {
+		Next[0] = -1;
+		for (int i = 0, j = -1, len = strlen(str); i < len; ) {
+			if (j == -1 || str[i] == str[j]) { Next[++i] = ++j; }
+			else { j = Next[j]; }
+		}
+	}
+};
+```
+
+**经典例题**
+
+POJ -3461——[Oulipo](http://poj.org/problem?id=3461)
+
+题意：给定2个字符p和t。问p在t中出现几次
+
+分析：求出p的next数组，然后与t匹配。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <functional>
+using namespace std;
+typedef long long int LL;
+const int MAX = 1e6+24; //字符串长度
+namespace KMP {
+	int Next[MAX];
+	void Init(char *str) {
+		Next[0] = -1;
+		for (int i = 0, j = -1, len = strlen(str); i < len; ) {
+			if (j == -1 || str[i] == str[j]) { Next[++i] = ++j; }
+			else { j = Next[j]; }
+		}
+	}
+	int kmp(char *p, char *t) {
+		Init(p);
+		int result = 0;
+		for (int i = 0, j = 0, lenp = strlen(p), lent = strlen(t); i < lent;) {
+			if (j == -1 || p[j] == t[i]) { j++; i++; }
+			else { j = Next[j]; }
+			if (j == lenp) { result++; j = Next[j]; }
+		}
+		return result;
+	}
+};
+char P[MAX], T[MAX];
+int main() {
+	int t;
+	scanf("%d", &t);
+	while (t--) {
+		scanf("%s%s", P,T);
+		printf("%d\n",KMP::kmp(P,T));
+	}
+	return 0;
+}
+```
+
 ### Extend-KMP算法
 
 **问题模型** 
@@ -256,7 +506,158 @@ $extend[i]$： $S[i...(n-1)]$与T的最长公共前缀的长度。
 
 [扩展KMP算法](https://segmentfault.com/a/1190000008663857) 
 
+**模板代码**
+
+```c++
+namespace ExtendKMP {
+	int Next[MAX],ExNext[MAX];
+	void GetNext(char *str) {
+		int lenstr = strlen(str);
+		Next[0] = lenstr;
+		for (int i = 1, j = -1, a, p; i < lenstr; i++, j--) {
+			if (j < 0 || i + Next[i - a] >= p) {
+				if (j < 0) p = i, j = 0;
+				while (p < lenstr&&str[p] == str[j])  p++, j++;
+				Next[i] = j;
+				a = i;
+			}
+			else
+				Next[i] = Next[i - a];
+		}
+	}
+	void GetExtendNext(char *t, char *s) {
+		GetNext(t);
+		for (int i = 0, j = -1, lent = strlen(t), lens = strlen(s), p, a; i < lens; i++, j--) {
+			if (j < 0 || i + Next[i - a] >= p) {                                  
+				if (j < 0) p = i, j = 0; 
+				while (p < lens&&j < lent&&s[p] == t[j]) p++, j++;
+				ExNext[i] = j;
+				a = i;
+			}
+			else
+				ExNext[i] = Next[i - a];
+		}
+	}
+};
+```
+
+**经典问题**
+
+POJ-3461——[Oulipo](http://poj.org/problem?id=3461)
+
+题意：给定2个字符p和t。问p在t中出现几次
+
+分析：exnext[i]表示t[i...|t|-1]与p[0...|p|-1]的最长公共前缀，如果公共前缀长度>=|p|，说明t[i...i+|p|-1]==p[0...|p|-1]。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <functional>
+using namespace std;
+typedef long long int LL;
+const int MAX = 1e6+24; //字符串长度
+namespace ExtendKMP {
+	int Next[MAX],ExNext[MAX];
+	void GetNext(char *str) {
+		int lenstr = strlen(str);
+		Next[0] = lenstr;
+		for (int i = 1, j = -1, a, p; i < lenstr; i++, j--) {
+			if (j < 0 || i + Next[i - a] >= p) {
+				if (j < 0) p = i, j = 0;
+				while (p < lenstr&&str[p] == str[j])  p++, j++;
+				Next[i] = j;
+				a = i;
+			}
+			else
+				Next[i] = Next[i - a];
+		}
+	}
+	void GetExtendNext(char *t, char *s) {
+		GetNext(t);
+		for (int i = 0, j = -1, lent = strlen(t), lens = strlen(s), p, a; i < lens; i++, j--) {
+			if (j < 0 || i + Next[i - a] >= p) {                                  
+				if (j < 0) p = i, j = 0; 
+				while (p < lens&&j < lent&&s[p] == t[j]) p++, j++;
+				ExNext[i] = j;
+				a = i;
+			}
+			else
+				ExNext[i] = Next[i - a];
+		}
+	}
+	int Solve(char *p, char *t) {
+		GetExtendNext(p, t);
+		int result = 0;
+		for (int i = 0, lenp = strlen(p), lent = strlen(t); i < lent; i++) {
+			if (ExNext[i] >= lenp) { 
+				result++;
+			}
+		}
+		return result;
+	}
+};
+char P[MAX], T[MAX];
+int main() {
+	int t;
+	scanf("%d", &t);
+	while (t--) {
+		scanf("%s%s", P,T);
+		printf("%d\n", ExtendKMP::Solve(P,T));
+	}
+	return 0;
+}
+```
+
 ### 字典树算法 (Trie)
+
+**问题模型**
+
+
+
+**算法模板**
+
+```c++
+namespace Trie {
+	const int SIZE = 256;
+	int child[MAX][SIZE], value[MAX*SIZE], L, root;
+	int newNode() {
+		memset(child[L], -1, sizeof(child[L]));
+		value[L] = 0;
+		return L++;
+	}
+	void Init() {
+		root = newNode();
+	}
+	void Insert(char *str) {
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i]] == -1) {
+				child[now][str[i]] = newNode();
+			}
+			now = child[now][str[i]];
+		}
+		value[now]++;
+	}
+	int Search(char *str) {
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i]] == -1) {
+				return 0;
+			}
+			now = child[now][str[i]];
+		}
+		return value[now];
+	}
+};
+```
+
+**经典例题**
+
+
+
 ### AC自动机算法 (Aho-Corasick automaton)
 
 
@@ -318,6 +719,119 @@ $2*id-i$为$i$关于$id$的对称点，即上图的$j$点，而$p[j]$表示以j�
 **推荐阅读：**
 
 [Manacher算法](https://www.61mon.com/index.php/archives/181/)
+
+**算法模板**
+
+```c++
+namespace Manacher {
+	char dstr[MAX * 3];
+	int p[MAX * 3],lendstr;
+	void init(char *str) {
+		dstr[0] = '$'; dstr[1] = '#';
+		int lenstr = strlen(str);
+		for (int i = 0; i<lenstr; i++) {
+			dstr[i * 2 + 2] = str[i]; dstr[i * 2 + 3] = '#';
+		}
+		lendstr = lenstr * 2 + 2;
+		dstr[lendstr] = '*';
+	}
+	int manacher() {
+		memset(p, 0, sizeof(p));
+		int id = 0, mx = 0;
+		for (int i = 1; i<lendstr; i++) {
+			if (mx>i) {
+				p[i] = min(p[2 * id - i], mx - i);
+			}
+			else {
+				p[i] = 1;
+			}
+			while (dstr[i - p[i]] == dstr[i + p[i]]) {
+				p[i]++;
+			}
+			if (p[i] + i>mx) {
+				mx = p[i] + i;
+				id = i;
+			}
+		}
+		int result = 0;
+		for (int i = 0; i<lendstr; i++) {
+			result = max(result, p[i]);
+		}
+		return result - 1;
+	}
+};
+```
+
+**经典问题**
+
+HDU-3068——[最长回文](http://acm.hdu.edu.cn/showproblem.php?pid=3068)
+
+题意：给定一个字符串，求该字符串的最长回文子串长度。
+
+分析：模板题
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <functional>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+#include <string>
+using namespace std;
+typedef long long int LL;
+const int MAX = 110000 +24; //字符串长度
+namespace Manacher {
+	char dstr[MAX * 3];
+	int p[MAX * 3],lendstr;
+	void init(char *str) {
+		dstr[0] = '$'; dstr[1] = '#';
+		int lenstr = strlen(str);
+		for (int i = 0; i<lenstr; i++) {
+			dstr[i * 2 + 2] = str[i]; dstr[i * 2 + 3] = '#';
+		}
+		lendstr = lenstr * 2 + 2;
+		dstr[lendstr] = '*';
+	}
+	int manacher() {
+		memset(p, 0, sizeof(p));
+		int id = 0, mx = 0;
+		for (int i = 1; i<lendstr; i++) {
+			if (mx>i) {
+				p[i] = min(p[2 * id - i], mx - i);
+			}
+			else {
+				p[i] = 1;
+			}
+			while (dstr[i - p[i]] == dstr[i + p[i]]) {
+				p[i]++;
+			}
+			if (p[i] + i>mx) {
+				mx = p[i] + i;
+				id = i;
+			}
+		}
+		int result = 0;
+		for (int i = 0; i<lendstr; i++) {
+			result = max(result, p[i]);
+		}
+		return result - 1;
+	}
+};
+char str[MAX];
+int main() {
+	while (~scanf("%s", str)) {
+		Manacher::init(str);
+		printf("%d\n",Manacher::manacher());
+	}
+	return 0;
+}
+```
+
+
 
 ### 回文树(Palindromic Tree)
 
@@ -388,6 +902,69 @@ $2*id-i$为$i$关于$id$的对称点，即上图的$j$点，而$p[j]$表示以j�
 Victor Wonder《Palindromic tree.》(参见附件)
 
 2017国家集训队论文- 翁文涛《回文树及其应用》(参见附件)
+
+[Palindromic Tree——回文树【处理一类回文串问题的强力工具】](http://blog.csdn.net/u013368721/article/details/42100363)
+
+**模板代码**
+
+```c++
+const int MAXN = 100005 ;
+const int N = 26 ;
+
+struct Palindromic_Tree {
+	int next[MAXN][N] ;//next指针，next指针和字典树类似，指向的串为当前串两端加上同一个字符构成
+	int fail[MAXN] ;//fail指针，失配后跳转到fail指针指向的节点
+	int cnt[MAXN] ;
+	int num[MAXN] ;
+	int len[MAXN] ;//len[i]表示节点i表示的回文串的长度
+	int S[MAXN] ;//存放添加的字符
+	int last ;//指向上一个字符所在的节点，方便下一次add
+	int n ;//字符数组指针
+	int p ;//节点指针
+
+	int newnode ( int l ) {//新建节点
+		for ( int i = 0 ; i < N ; ++ i ) next[p][i] = 0 ;
+		cnt[p] = 0 ;
+		num[p] = 0 ;
+		len[p] = l ;
+		return p ++ ;
+	}
+
+	void init () {//初始化
+		p = 0 ;
+		newnode (  0 ) ;
+		newnode ( -1 ) ;
+		last = 0 ;
+		n = 0 ;
+		S[n] = -1 ;//开头放一个字符集中没有的字符，减少特判
+		fail[0] = 1 ;
+	}
+
+	int get_fail ( int x ) {//和KMP一样，失配后找一个尽量最长的
+		while ( S[n - len[x] - 1] != S[n] ) x = fail[x] ;
+		return x ;
+	}
+
+	void add ( int c ) {
+		c -= 'a' ;
+		S[++ n] = c ;
+		int cur = get_fail ( last ) ;//通过上一个回文串找这个回文串的匹配位置
+		if ( !next[cur][c] ) {//如果这个回文串没有出现过，说明出现了一个新的本质不同的回文串
+			int now = newnode ( len[cur] + 2 ) ;//新建节点
+			fail[now] = next[get_fail ( fail[cur] )][c] ;//和AC自动机一样建立fail指针，以便失配后跳转
+			next[cur][c] = now ;
+			num[now] = num[fail[now]] + 1 ;
+		}
+		last = next[cur][c] ;
+		cnt[last] ++ ;
+	}
+
+	void count () {
+		for ( int i = p - 1 ; i >= 0 ; -- i ) cnt[fail[i]] += cnt[i] ;
+		//父亲累加儿子的cnt，因为如果fail[v]=u，则u一定是v的子回文串！
+	}
+} ;
+```
 
 ## 后缀利器 
 ### 后缀数组(Suffix Array)
@@ -630,11 +1207,7 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 
 ## 线段树(Segment Tree)
 
-## 重口味线段树(ZKW Segment Tree)
-
-## 小清新线段树
-
-## 树套树(套树X*)
+## ZKW线段树(ZKW Segment Tree)
 
 ## 主席树
 
@@ -729,6 +1302,8 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 ### 离散化
 
 ### 启发式合并
+
+###树套树
 
 
 
