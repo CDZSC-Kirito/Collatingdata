@@ -1013,7 +1013,7 @@ struct Palindromic_Tree {
 
 2. 如果$s1$和$s2$是循环同构的，那么当$i$,$j$分别指向$M(s1)$,$M(s2)$时，一定可以得到$u[i→i+|s1|-1]=w[j→j+|s2|-1]$，迅速输出正确解。
 
-   ![最小表示法-4](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-4.PNG)
+   ![最小表示法-4](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-4.png)
 
    ​
 
@@ -1030,13 +1030,13 @@ struct Palindromic_Tree {
 
    当$i \leqslant x\leqslant i+k$时，我们来研究$s1^{(x-1)}$。
 
-   ![最小表示法-5](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-5.PNG)
+   ![最小表示法-5](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-5.png)
 
    ​
 
 5. 因为$u[x]$在$u[i]$后($x-i$)个位置，对应的可以找到在$w[j]$后($x-i$)个位置的$w[j+(x-i)]$，同样对应的有$u[x+1]$和$w[j+(x+1-i)]$，$u[x+2]$和$w[j+(x+2)-i]$，直到$u[i+k-1]$和$w[j+k-1]$。它们都是相等的，即有$u[x→i+k-1]=w[j+(x-i)→j+k-1]$。
 
-   ![最小表示法-6](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-6.PNG)
+   ![最小表示法-6](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-6.png)
 
    ​
 
@@ -1044,7 +1044,7 @@ struct Palindromic_Tree {
 
    指针$i$滑到$u[i+k+1]$处仍可以保证**小于等于**$M(s1)$！
 
-   ![最小表示法-7](Image/最小表示法-7.PNG)
+   ![最小表示法-7](Image/最小表示法-7.png)
 
    ​
 
