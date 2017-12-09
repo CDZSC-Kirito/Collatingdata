@@ -991,7 +991,7 @@ struct Palindromic_Tree {
 
 有两条环状的项链，每条项链上各有N个多种颜色的珍珠，相同颜色的珍珠，被视为相同。由于项链是环状的，因此循环以后的项链被视为相同的,判断两条项链是否相同。如下图
 
-![最小表示法-1](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/%E6%9C%80%E5%B0%8F%E8%A1%A8%E7%A4%BA%E6%B3%95-1.png)
+![最小表示法-1](Image/最小表示法-1.png)
 
 **算法流程：**
 
@@ -1003,17 +1003,17 @@ struct Palindromic_Tree {
 
 设函数$M(s)$返回值意义为：从$s$的第$M(s)$个字符引起的$s$的一个循环表示是$s$的最小表示。若有多个值，则返回最小的一个。
 
-![最小表示法-2](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-2.png)
+![最小表示法-2](Image/最小表示法-2.png)
 
 1. 设$u=s1+s1$，$w=s2+s2$并设指针$i$,$j$指向$u$,$w$第一个字符
 
-   ![最小表示法-3](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-3.png)
+   ![最小表示法-3](Image/最小表示法-3.png)
 
    ​
 
 2. 如果$s1$和$s2$是循环同构的，那么当$i$,$j$分别指向$M(s1)$,$M(s2)$时，一定可以得到$u[i→i+|s1|-1]=w[j→j+|s2|-1]$，迅速输出正确解。
 
-   ![最小表示法-4](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-4.png)
+   ![最小表示法-4](Image/最小表示法-4.png)
 
    ​
 
@@ -1030,13 +1030,13 @@ struct Palindromic_Tree {
 
    当$i \leqslant x\leqslant i+k$时，我们来研究$s1^{(x-1)}$。
 
-   ![最小表示法-5](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-5.png)
+   ![最小表示法-5](Image/最小表示法-5.png)
 
    ​
 
 5. 因为$u[x]$在$u[i]$后($x-i$)个位置，对应的可以找到在$w[j]$后($x-i$)个位置的$w[j+(x-i)]$，同样对应的有$u[x+1]$和$w[j+(x+1-i)]$，$u[x+2]$和$w[j+(x+2)-i]$，直到$u[i+k-1]$和$w[j+k-1]$。它们都是相等的，即有$u[x→i+k-1]=w[j+(x-i)→j+k-1]$。
 
-   ![最小表示法-6](https://github.com/CDZSC-Kirito/Collatingdata/blob/master/Image/最小表示法-6.png)
+   ![最小表示法-6](Image/最小表示法-6.png)
 
    ​
 
