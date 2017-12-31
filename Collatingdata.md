@@ -619,23 +619,46 @@ int main() {
 
 **问题模型**
 
+给定一组字符串，查询某个字符串是否出现在这组字符串中。另外还常用于XOR问题中。
 
+**算法流程**
+
+典型应用于统计，排序和保存大量字符串(但不限于字符串)，主要思想是利用字符串的公共前缀来节约空间。
+
+同时也是很多复杂数据结构的基础，如后缀树，后缀自动机等。
+
+下图为and,as,at,cn,com这些关键词所构建的trie树
+
+![Trie-1](http://pic002.cnblogs.com/images/2012/214741/2012112521092438.png)
+
+一些性质:
+
+1,根节点不包含字符，除根节点外的每一个子节点都包含一个字符。
+
+2,从根节点到某一节点，路径上经过的字符连接起来，就是该节点对应的字符串。
+
+3,每个单词的公共前缀作为一个字符节点保存。
+
+**推荐阅读**
+
+《浅析字母树在信息学竞赛中的应用》(参见附件)
 
 **算法模板**
 
 ```c++
 namespace Trie {
-	const int SIZE = 256;
-	int child[MAX][SIZE], value[MAX*SIZE], L, root;
-	int newNode() {
+	const int SIZE = 256;  //字符集大小
+	int child[MAX][SIZE], value[MAX*SIZE];
+  	int L, root;  
+	int newNode() { //新建结点
 		memset(child[L], -1, sizeof(child[L]));
 		value[L] = 0;
 		return L++;
 	}
-	void Init() {
-		root = newNode();
+	void Init() { //初始化
+		L = 0; root = newNode();
 	}
-	void Insert(char *str) {
+	void Insert(char *str) { //插入字符串
 		int now = root;
 		for (int i = 0, len = strlen(str); i < len; i++) {
 			if (child[now][str[i]] == -1) {
@@ -645,7 +668,7 @@ namespace Trie {
 		}
 		value[now]++;
 	}
-	int Search(char *str) {
+	int Search(char *str) { //查询字符串
 		int now = root;
 		for (int i = 0, len = strlen(str); i < len; i++) {
 			if (child[now][str[i]] == -1) {
@@ -660,11 +683,286 @@ namespace Trie {
 
 **经典例题**
 
+HDU-1251——[统计难题](http://acm.hdu.edu.cn/showproblem.php?pid=1251)
 
+题意：Ignatius最近遇到一个难题,老师交给他很多单词(只有小写字母组成,不会有重复的单词出现),现在老师要他统计出以某个字符串为前缀的单词数量(单词本身也是自己的前缀). 
+
+分析：对于每个字典串的前缀，用value统计每个前缀出现的次数即可。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+typedef long long int LL;
+const int MAX = 500000 + 24;
+namespace Trie {
+	const int SIZE = 26;  //字符集大小
+	int child[MAX][SIZE], value[MAX*SIZE];
+	int L, root;
+	int newNode() { //新建结点
+		memset(child[L], -1, sizeof(child[L]));
+		value[L] = 0;
+		return L++;
+	}
+	void Init() { //初始化
+		L = 0; root = newNode();
+	}
+	void Insert(char *str) { //插入字符串
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i]-'a'] == -1) {
+				child[now][str[i]-'a'] = newNode();
+			}
+			now = child[now][str[i]-'a'];
+			value[now]++;
+		}
+	}
+	int Search(char *str) { //查询字符串
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i]-'a'] == -1) {
+				return 0;
+			}
+			now = child[now][str[i]-'a'];
+		}
+		return value[now];
+	}
+};
+char str[MAX];
+int main() {
+	Trie::Init();
+	while (gets(str) && str[0]) {
+		Trie::Insert(str);
+	}
+	while (~scanf("%s", str)) {
+		printf("%d\n", Trie::Search(str));
+	}
+	return 0;
+}
+```
 
 ### AC自动机算法 (Aho-Corasick automaton)
 
+**问题模型**
 
+现有一篇文章，给定若干个字符串问这些字符串在这篇文章中出现的次数。 用于多模式式匹配。
+
+**算法过程**
+
+AC自动机可以看成是字典树+KMP的组合，用于解决多模式匹配问题。重点在于fail指针的理解。
+
+以say，she，shr，he，her为例。
+
+【构造字典树】
+
+![AC-1](http://www.cppblog.com/images/cppblog_com/mythit/ac1.jpg)
+
+【构造fail指针】
+
+1，root入队，第1次循环时处理与root相连的字符，也就是各个单词的第一个字符h和s，因为第一个字符不匹配需要重新匹配，所以第一个字符都指向root（root是Trie入口，没有实际含义）失败指针的指向对应下图中的(1)，(2)两条虚线；
+
+2，第2次进入循环后，从队列中先弹出h，接下来p指向h节点的fail指针指向的节点，也就是root；p=p->fail也就是p=NULL说明匹配序列为空，则把节点e的fail指针指向root表示没有匹配序列，对应图-2中的(3)，然后节点e进入队列；
+
+3，第3次循环时，弹出的第一个节点a的操作与上一步操作的节点e相同，把a的fail指针指向root，对应图-2中的(4)，并入队；
+
+4，第4次进入循环时，弹出节点h(图中左边那个)，这时操作略有不同。由于p->next[i]!=NULL(root有h这个儿子节点，图中右边那个)，这样便把左边那个h节点的失败指针指向右边那个root的儿子节点h，对应图-2中的(5)，然后h入队。以此类推：在循环结束后，所有的失败指针就是下图中的这种形式。
+
+![AC-2](http://www.cppblog.com/images/cppblog_com/mythit/ac2.JPG)
+
+【扫描/查询】
+
+构造好Trie和失败指针后，我们就可以对主串进行扫描了。这个过程和KMP算法很类似，但是也有一定的区别，主要是因为AC自动机处理的是多串模式，需要防止遗漏某个单词，所以引入temp指针。 匹配过程分成两种情况：
+
+1，当前字符匹配，表示从当前节点沿着树边有一条路径可以到达目标字符，此时只需沿该路径走向下一个节点继续匹配即可，目标字符串指针移向下个字符继续匹配；
+
+2，当前字符不匹配，则去当前节点失败指针所指向的字符继续匹配，匹配过程随着指针指向root结束。重复这2个过程中的任意一个，直到模式串走到结尾为止。
+
+**推荐阅读**
+
+[AC自动机](http://www.cppblog.com/menjitianya/archive/2014/07/10/207604.html)
+
+Set Matching and Aho-Corasick Algorithm(参见附件)
+
+**扩展阅读**
+
+有限状态自动机——乔明达(参见附件)
+
+有限状态自动机的应用——贾志鹏(参见附件)
+
+**算法模板**
+
+```c++
+namespace AC_Automaton {
+	const int SIZE = 256;  //字符集大小
+	int child[MAX][SIZE], value[MAX*SIZE], fail[MAX*SIZE];
+	int L, root;
+	int newNode() { //新建结点
+		memset(child[L], -1, sizeof(child[L]));
+		value[L] = 0;
+		return L++;
+	}
+	void Init() { //初始化
+		L = 0;
+		root = newNode();
+	}
+	void Insert(char *str) { //插入字符串
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i]] == -1) {
+				child[now][str[i]] = newNode();
+			}
+			now = child[now][str[i]];
+		}
+		value[now]++;
+	}
+	void Build() { //构造fail指针
+		fail[root] = root;
+		queue<int> Q;
+		for (int i = 0; i < SIZE; i++) {
+			if (child[root][i] == -1) {
+				child[root][i] = root;
+			}
+			else {
+				fail[child[root][i]] = root;
+				Q.push(child[root][i]);
+			}
+		}
+		while (!Q.empty()) {
+			int now = Q.front(); Q.pop();
+			for (int i = 0; i < SIZE; i++) {
+				if (child[now][i] == -1) {
+					child[now][i] = child[fail[now]][i];
+				}
+				else {
+					fail[child[now][i]] = child[fail[now]][i];
+					Q.push(child[now][i]);
+				}
+			}
+		}
+	}
+	int Search(char *str) { //查询字符串
+		int now = root, result = 0, cur;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			while (now != root && child[now][str[i]] == -1) {
+				now = fail[now];
+			}
+			cur = now = child[now][str[i]];
+			while (cur != root) {
+				result += value[cur];
+				value[cur] = 0;
+				cur = fail[cur];
+			}
+		}
+		return result;
+	}
+};
+```
+
+**经典例题**
+
+HDU-2222——[Keywords Search](http://acm.hdu.edu.cn/showproblem.php?pid=2222)
+
+题意：现有n个关键串，然后给定一篇文章问这些关键串在文章中出现多少次？
+
+分析：模板题。 注意避免重复计算，计算过的value需要清0。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <queue>
+using namespace std;
+typedef long long int LL;
+const int MAX = 500000 + 24;
+const int MAXL = 1000000 + 24;
+namespace AC_Automaton {
+	const int SIZE = 26;  //字符集大小
+	int child[MAX][SIZE], value[MAX*SIZE], fail[MAX*SIZE];
+	int L, root;
+	int newNode() { //新建结点
+		memset(child[L], -1, sizeof(child[L]));
+		value[L] = 0;
+		return L++;
+	}
+	void Init() { //初始化
+		L = 0;
+		root = newNode();
+	}
+	void Insert(char *str) { //插入字符串
+		int now = root;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			if (child[now][str[i] - 'a'] == -1) {
+				child[now][str[i] - 'a'] = newNode();
+			}
+			now = child[now][str[i] - 'a'];
+		}
+		value[now]++;
+	}
+	void Build() { //构造fail数组
+		fail[root] = root;
+		queue<int> Q;
+		for (int i = 0; i < SIZE; i++) {
+			if (child[root][i] == -1) {
+				child[root][i] = root;
+			}
+			else {
+				fail[child[root][i]] = root;
+				Q.push(child[root][i]);
+			}
+		}
+		while (!Q.empty()) {
+			int now = Q.front(); Q.pop();
+			for (int i = 0; i < SIZE; i++) {
+				if (child[now][i] == -1) {
+					child[now][i] = child[fail[now]][i];
+				}
+				else {
+					fail[child[now][i]] = child[fail[now]][i];
+					Q.push(child[now][i]);
+				}
+			}
+		}
+	}
+	int Search(char *str) { //查询字符串
+		int now = root, result = 0, cur;
+		for (int i = 0, len = strlen(str); i < len; i++) {
+			while (now != root && child[now][str[i] - 'a'] == -1) {
+				now = fail[now];
+			}
+			cur = now = child[now][str[i] - 'a'];
+			while (cur != root) {
+				result += value[cur];
+				value[cur] = 0; //清0
+				cur = fail[cur];
+			}
+		}
+		return result;
+	}
+};
+char keyword[55];
+char str[MAXL];
+int main() {
+	int t, n;
+	scanf("%d", &t);
+	while (t--) {
+		scanf("%d", &n);
+		AC_Automaton::Init();
+		for (int i = 0; i < n; i++) {
+			scanf("%s", keyword);
+			AC_Automaton::Insert(keyword);
+		}
+		AC_Automaton::Build();
+		scanf("%s", str);
+		printf("%d\n", AC_Automaton::Search(str));
+	}
+	return 0;
+}
+```
 
 ## 回文串问题
 
@@ -971,14 +1269,315 @@ struct Palindromic_Tree {
 ```
 
 ## 后缀利器 
+
+子串：字符串S的子串sub[i...j]，i<=j，表示S串中从i到j这一段，也就是S[i],S[i+1],S[i+2]...S[j]形成的字符串。
+
+ 后缀：后缀是只从某个位置i开始一直到整个串末尾的一个特殊子串，字符串S从第i个位置开始的后缀表示为Suffix(i)，也就是Suffix(i)=S[i...|S|] (|S|=length(S))
+
 ### 后缀数组(Suffix Array)
+
+**问题模型**
+
+后缀数组非常强大，能解决但不限于：回文串问题，子串统计问题，多个字符串公共子串问题，重复出现的字符问题等等
+
+**算法过程**
+
+【符号含义】
+
+SA：后缀数组SA是一个一维数组，它保存1...|S|的某个排序SA[1],SA[2],...SA[|S|]，并保证Suffix(SA[i])<Suffix(S[i+1])，也就是将S的|S|个后缀从小到大排好序的后缀的开头位置顺次放入SA中。 简称：**"排第几的是谁”**
+
+Rank：名次数组Rank保存的是所有后缀中从小到大排列的“名次”。 简称：**"你排第几"**
+
+Height：高度数组Height保存的是排名相邻的两个后缀的最长公共前缀长度。 既SA[i]和SA[i+1]的LCP，而两个**排名不相邻**的最长公共前缀定义为排名在它们之间的**Height的最小值**。  既SA[i]与SA[j] (i!=j)的LCP为min(Height[i],Height[i+1],..Height[j-1])。
+
+![SA-1](http://img.blog.csdn.net/20160205125505545)
+
+![SA-2](http://img.blog.csdn.net/20160205125636006)
+
+常见构造后缀数组的算法有两种：DC3和DA。 具体参见推荐阅读中的资料有非常详细的过程说明！
+
+**推荐阅读**
+
+2004年国家集训队论文-许智磊《后缀数组》(参见附件)
+
+2009年国家集训队论文-罗穗骞《后缀数组——处理字符串的有力工具》(参见附件)
+
+[trie上构建后缀数组和波兰表](http://blog.csdn.net/geotcbrl/article/details/50907662)
+
+[逆波兰表-VFleaKing](http://vfleaking.blog.163.com/blog/static/174807634201321981915529/)
+
+**算法模板**
+
+DA实现
+
+```c++
+int wa[maxn],wb[maxn],wv[maxn],ws[maxn];
+int cmp(int *r,int a,int b,int l)
+{return r[a]==r[b]&&r[a+l]==r[b+l];}
+void da(int *r,int *sa,int n,int m)
+{
+     int i,j,p,*x=wa,*y=wb,*t;
+     for(i=0;i<m;i++) ws[i]=0;
+     for(i=0;i<n;i++) ws[x[i]=r[i]]++;
+     for(i=1;i<m;i++) ws[i]+=ws[i-1];
+     for(i=n-1;i>=0;i--) sa[--ws[x[i]]]=i;
+     for(j=1,p=1;p<n;j*=2,m=p)
+     {
+       for(p=0,i=n-j;i<n;i++) y[p++]=i;
+       for(i=0;i<n;i++) if(sa[i]>=j) y[p++]=sa[i]-j;
+       for(i=0;i<n;i++) wv[i]=x[y[i]];
+       for(i=0;i<m;i++) ws[i]=0;
+       for(i=0;i<n;i++) ws[wv[i]]++;
+       for(i=1;i<m;i++) ws[i]+=ws[i-1];
+       for(i=n-1;i>=0;i--) sa[--ws[wv[i]]]=y[i];
+       for(t=x,x=y,y=t,p=1,x[sa[0]]=0,i=1;i<n;i++)
+       x[sa[i]]=cmp(y,sa[i-1],sa[i],j)?p-1:p++;
+     }
+     return;
+}
+int rank[maxn],height[maxn];
+void calheight(int *r,int *sa,int n)
+{
+     int i,j,k=0;
+     for(i=1;i<=n;i++) rank[sa[i]]=i;
+     for(i=0;i<n;height[rank[i++]]=k)
+     for(k?k--:0,j=sa[rank[i]-1];r[i+k]==r[j+k];k++);
+     return;
+}
+int RMQ[maxn];
+int mm[maxn];
+int best[20][maxn];
+void initRMQ(int n)
+{
+     int i,j,a,b;
+     for(mm[0]=-1,i=1;i<=n;i++)
+     mm[i]=((i&(i-1))==0)?mm[i-1]+1:mm[i-1];
+     for(i=1;i<=n;i++) best[0][i]=i;
+     for(i=1;i<=mm[n];i++)
+     for(j=1;j<=n+1-(1<<i);j++)
+     {
+       a=best[i-1][j];
+       b=best[i-1][j+(1<<(i-1))];
+       if(RMQ[a]<RMQ[b]) best[i][j]=a;
+       else best[i][j]=b;
+     }
+     return;
+}
+int askRMQ(int a,int b)
+{
+    int t;
+    t=mm[b-a+1];b-=(1<<t)-1;
+    a=best[t][a];b=best[t][b];
+    return RMQ[a]<RMQ[b]?a:b;
+}
+int lcp(int a,int b)
+{
+    int t;
+    a=rank[a];b=rank[b];
+    if(a>b) {t=a;a=b;b=t;}
+    return(height[askRMQ(a+1,b)]);
+}
+
+```
+
+DC3实现
+
+```c++
+#define F(x) ((x)/3+((x)%3==1?0:tb))
+#define G(x) ((x)<tb?(x)*3+1:((x)-tb)*3+2)
+int wa[maxn],wb[maxn],wv[maxn],ws[maxn];
+int c0(int *r,int a,int b)
+{return r[a]==r[b]&&r[a+1]==r[b+1]&&r[a+2]==r[b+2];}
+int c12(int k,int *r,int a,int b)
+{if(k==2) return r[a]<r[b]||r[a]==r[b]&&c12(1,r,a+1,b+1);
+ else return r[a]<r[b]||r[a]==r[b]&&wv[a+1]<wv[b+1];}
+void sort(int *r,int *a,int *b,int n,int m)
+{
+     int i;
+     for(i=0;i<n;i++) wv[i]=r[a[i]];
+     for(i=0;i<m;i++) ws[i]=0;
+     for(i=0;i<n;i++) ws[wv[i]]++;
+     for(i=1;i<m;i++) ws[i]+=ws[i-1];
+     for(i=n-1;i>=0;i--) b[--ws[wv[i]]]=a[i];
+     return;
+}
+void dc3(int *r,int *sa,int n,int m)
+{
+     int i,j,*rn=r+n,*san=sa+n,ta=0,tb=(n+1)/3,tbc=0,p;
+     r[n]=r[n+1]=0;
+     for(i=0;i<n;i++) if(i%3!=0) wa[tbc++]=i;
+     sort(r+2,wa,wb,tbc,m);
+     sort(r+1,wb,wa,tbc,m);
+     sort(r,wa,wb,tbc,m);
+     for(p=1,rn[F(wb[0])]=0,i=1;i<tbc;i++)
+     rn[F(wb[i])]=c0(r,wb[i-1],wb[i])?p-1:p++;
+     if(p<tbc) dc3(rn,san,tbc,p);
+     else for(i=0;i<tbc;i++) san[rn[i]]=i;
+     for(i=0;i<tbc;i++) if(san[i]<tb) wb[ta++]=san[i]*3;
+     if(n%3==1) wb[ta++]=n-1;
+     sort(r,wb,wa,ta,m);
+     for(i=0;i<tbc;i++) wv[wb[i]=G(san[i])]=i;
+     for(i=0,j=0,p=0;i<ta && j<tbc;p++)
+     sa[p]=c12(wb[j]%3,r,wa[i],wb[j])?wa[i++]:wb[j++];
+     for(;i<ta;p++) sa[p]=wa[i++];
+     for(;j<tbc;p++) sa[p]=wb[j++];
+     return;
+}
+int rank[maxn],height[maxn];
+void calheight(int *r,int *sa,int n)
+{
+     int i,j,k=0;
+     for(i=1;i<=n;i++) rank[sa[i]]=i;
+     for(i=0;i<n;height[rank[i++]]=k)
+     for(k?k--:0,j=sa[rank[i]-1];r[i+k]==r[j+k];k++);
+     return;
+}
+```
+
+**经典例题**
+
+POJ-2774——[Long Long Message](http://poj.org/problem?id=2774)
+
+题意：给定两个字符串，求两个字符串的最长公共子串。
+
+分析：字符串的任何一个子串都是这个字符串某个后缀的前缀，求A和B的最长公共子串等价于求A的后缀和B的后缀的最长公共前缀的最大值。于是把A和B组合成一个A#B形式的新串，#为一个没有出现在A和B中的特殊字符，然后对新串构造后缀数组，然后枚举Height数组求最大值，但是要注意更新最大值时两个后缀要分别来自A串和B串。
+
+代码：
+
+```C++
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+typedef long long int LL;
+const int MAXN = 200000 + 5;
+int cmp(int *r, int a, int b, int l) {
+	return r[a] == r[b] && r[a + l] == r[b + l];
+}
+int wa[MAXN], wb[MAXN], wv[MAXN], WS[MAXN];
+void da(int *r, int *sa, int n, int m) {
+	int i, j, p, *x = wa, *y = wb, *t;
+	for (i = 0; i < m; i++) { WS[i] = 0; }
+	for (i = 0; i < n; i++) { WS[x[i] = r[i]]++; }
+	for (i = 1; i < m; i++) { WS[i] += WS[i - 1]; }
+	for (i = n - 1; i >= 0; i--) { sa[--WS[x[i]]] = i; }
+	for (j = 1, p = 1; p<n; j *= 2, m = p)
+	{
+		for (p = 0, i = n - j; i < n; i++) { y[p++] = i; }
+		for (i = 0; i < n; i++) {
+			if (sa[i] >= j) { y[p++] = sa[i] - j; }
+		}
+		for (i = 0; i < n; i++) { wv[i] = x[y[i]]; }
+		for (i = 0; i < m; i++) { WS[i] = 0; }
+		for (i = 0; i < n; i++) { WS[wv[i]]++; }
+		for (i = 1; i < m; i++) { WS[i] += WS[i - 1]; }
+		for (i = n - 1; i >= 0; i--) { sa[--WS[wv[i]]] = y[i]; }
+		for (t = x, x = y, y = t, p = 1, x[sa[0]] = 0, i = 1; i < n; i++) {
+			x[sa[i]] = cmp(y, sa[i - 1], sa[i], j) ? p - 1 : p++;
+		}
+	}
+	return;
+}
+int Rank[MAXN], height[MAXN], sa[MAXN];
+void calheight(int *r, int *sa, int n) {
+	int i, j, k = 0;
+	for (i = 1; i <= n; i++) { Rank[sa[i]] = i; }
+	for (i = 0; i < n; height[Rank[i++]] = k) {
+		for (k ? k-- : 0, j = sa[Rank[i] - 1]; r[i + k] == r[j + k]; k++);
+	}
+	return;
+}
+int r[MAXN], Ca = 1, len, index; //index为两个串分隔的位置
+char str[MAXN], ch[MAXN];
+void solve() {
+	int ans = 0;
+	for (int i = 1; i < len; i++) {
+		int L = height[i];
+		int Fidx = min(sa[i - 1], sa[i]);
+		int Sidx = max(sa[i - 1], sa[i]);
+		if (Fidx<index&&Sidx>index) { //分别来自两个串
+			ans = max(ans, L);
+		}
+	}
+	printf("%d\n", ans);
+}
+int main() {
+	while (~scanf("%s%s", str, ch)) {
+		index = strlen(str);
+		strcat(str, "#"); strcat(str, ch);
+		len = strlen(str);
+		for (int i = 0; i < len; i++) {
+			if (str[i] == '#') { r[i] = 0; continue; }
+			r[i] = str[i] - 'a' + 1;
+		}
+		da(r, sa, len, 30);
+		calheight(r, sa, len - 1);
+		solve();
+	}
+	return 0;
+}
+```
+
 ### 后缀树(Suffix Tree)
+
+**问题模型**
+
+后缀树同样是对于字符串的后缀进行处理的数据结构，能解决的问题大致与后缀数组相似，但是由于后缀树的2个缺点：1，构造算法复杂。 2，空间开销大，尤其是字符集较大时。所以一般使用后缀数组代替后缀树。
+
+**推荐阅读**
+
+[后缀树的构造方法-Ukkonen详解](http://blog.csdn.net/smbroe/article/details/42362347)
+
 ### 后缀自动机(Suffix Automaton)
+
+**问题模型**
+
+**算法过程**
+
+**推荐阅读**
+
+**算法模板**
+
+**经典例题**
+
 ### 后缀平衡树(Suffix Balanced Tree)
 
-### 后缀仙人掌(Suffix Cactus)
+**问题模型**
 
+后缀平衡树简单的来说就是动态的后缀数组，能做到在$O(logn)$插入，$O(1)$查询rank，$O(logn)$查询SA。当然由于后缀平衡树是支持对后缀的操作，所以要求插入操作只能在**字符串开头/末尾**插入字符（相当于插入一个后缀）。
 
+**算法过程**
+
+【离线构造】
+
+根据定义，后缀平衡树就是把后缀数组构成一棵平衡树，所以只需先构出后缀数组再构后缀平衡树。
+
+【在线构造】
+
+于后缀平衡树只能支持在开头增加字符，所以我们就只讨论这种情况。 
+方案一： 
+现在我们需要一种能比较两个后缀大小的方法，最简单的就是二分+Hash，$O(logn)$的实现这个操作。加上在平衡树上插入的复杂度，总的插入的复杂度就是$O(log^{2}n)$
+
+方案二： 
+我们考虑另外一种比较方法，由于我们每次只增加一个字符，也就是说如果我们把第一个字符删掉，剩下的字符串在之前已经插入过后缀平衡树中，我们只需要线比较一下两个字符串的第一个字符，后面字符串的比较直接调用之前处理好的信息就可以了。
+
+那么现在的问题就变成了怎么快速的比较后缀平衡树中两个后缀的大小。我们考虑对每个节点对应一个区间$(l,r)$，令节点$i$的$tag_{i}=\frac{l+r}{2}$，它的左子树对应的区间是$(l,tag_{i})$，右子树对应的区间是$(tag_{i},r)$，容易发现我们比较两个后缀大小时只用比较它对应节点的$tag$值就好了。而且平衡树的深度是$O(logn)$级别的，所以说一个节点对应的区间不会很大，如果用整数类型表达的话基本$longlong$类型就可以表示出来。
+
+加入一个点后由于要维护对应的区间和$tag$值，普通的平衡树就维护不了了，所以要用到一种更高级的平衡树——重量平衡树（其实就是用复杂度证明的暴力），如替罪羊树，treap等。
+
+**推荐阅读**
+
+2013年国家集训队论文-陈立杰《重量平衡树和后缀平衡树在信息学奥赛中的应用》(参见附件)
+
+[后缀平衡树简要小结](http://blog.csdn.net/YxuanwKeith/article/details/52741250)
+
+[后缀平衡树](https://www.cnblogs.com/owenyu/p/6724597.html?utm_source=itdadao&utm_medium=referral)
+
+**算法模板**
+
+**经典例题**
 
 ## 其他问题
 ### 最小/大表示法(Minimum Representation)
@@ -1285,6 +1884,14 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 [fail树](http://www.cnblogs.com/zzqsblog/p/6227545.html)
 
 [AC自动机相关Fail树和Trie图相关基础知识 ](http://blog.csdn.net/txl199106/article/details/45315703)
+
+## 整合相关
+
+字符串相关算法介绍——罗雨屏(参见附件)
+
+字符串处理算法——邹权(参见附件)
+
+2015年国家集训队论文-王鉴浩《浅谈字符串匹配的集中方法》
 
 
 # 数据结构专题
