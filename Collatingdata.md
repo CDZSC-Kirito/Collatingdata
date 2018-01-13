@@ -1534,11 +1534,72 @@ int main() {
 
 **问题模型**
 
+后缀自动机同样是对于字符串的后缀进行处理的数据结构，能解决的问题大致与后缀数组相似，但是对比后缀树和后缀数组，后缀自动机有着一下的特定：1，支持动态插入； 2，模板代码短；3，复杂度优秀；4，不受字符集限制； 但是同样有着它的缺点：不好理解。 后缀自动机可以建造出后缀数组与后缀树。
+
 **算法过程**
+
+学习后缀自动机前，请确定已经已经KMP和AC自动机算法，并且需要了解自动机(DFA,NFA)。具体学习请参见推荐阅读。
 
 **推荐阅读**
 
+[后缀自动机：O(N)的构建及应用](http://blog.csdn.net/wmdcstdio/article/details/44780707)
+
+[后缀自动机与线性构造后缀树-fanqh666](http://fanhq666.blog.163.com/blog/static/8194342620123352232937/)
+
+[后缀自动机-Codeforces Blogs](http://codeforces.com/blog/entry/20861)
+
+[suffix-automaton-tutorial](https://huntzhan.org/suffix-automaton-tutorial/)
+
+WC2012营员交流-陈立杰讲稿(参见附件)
+
+SAM奇怪的补充-dkf(参见附件)
+
 **算法模板**
+
+```c++
+namespace Suffix_Automaton{
+    const int MAXN = 250000 + 10;
+    char buf[MAXN];
+    struct State {
+        State*suf, *go[26];
+        int val;
+        State() : suf(0), val(0) {
+            memset(go, 0, sizeof go);
+        }
+    }*root, *last;
+    State statePool[MAXN * 2], *cur;
+    
+    void init() {
+        cur = statePool;
+        root = last = cur++;
+    }
+    
+    void extend(int w) {
+        State*p = last, *np = cur++;
+        np->val = p->val + 1;
+        while (p && !p->go[w])
+            p->go[w] = np, p = p->suf;
+        if (!p)
+            np->suf = root;
+        else {
+            State*q = p->go[w];
+            if (p->val + 1 == q->val) {
+                np->suf = q;
+            } else {
+                State*nq = cur++;
+                memcpy(nq->go, q->go, sizeof q->go);
+                nq->val = p->val + 1;
+                nq->suf = q->suf;
+                q->suf = nq;
+                np->suf = nq;
+                while (p && p->go[w] == q)
+                    p->go[w] = nq, p = p->suf;
+            }
+        }
+        last = np;
+    }
+}
+```
 
 **经典例题**
 
@@ -1885,7 +1946,7 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 
 [AC自动机相关Fail树和Trie图相关基础知识 ](http://blog.csdn.net/txl199106/article/details/45315703)
 
-## 整合相关
+## 其他相关
 
 字符串相关算法介绍——罗雨屏(参见附件)
 
@@ -1946,29 +2007,9 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 
 ## 可持久化数据结构
 
-### 可持久化线段树
-
-### 可持久化Trie
-
-### 可持久化AC自动机
-
-### 可持久化主席树
-
-### 可持久化队列
-
-### 可持久化栈
-
-###可持久化并查集
-
-### 可持久化平衡树
-
-### 可持久化块状链表
 
 
-
-## 树上的问题
-
-### DFS序
+## 树上问题
 
 ### 树链剖分
 
@@ -1982,15 +2023,591 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 
 #### 链分治
 
-## 离线技巧
 
-### 莫队算法
+
+## 其他技巧
+
+### 莫队算法(Mo's Algorithm)
+
+**问题模型**
+
+莫队算法是一种以离线的方式处理区间问题的算法，同时也支持带修改的情况。 并且还可以进一步扩展到树上的问题，通过对树进行树分块，树剖分，DFS序转成区间问题，同时莫队算法的实现复杂度简单，堪称**“优雅的暴力”**，在离线区间问题几乎是无敌般的存在。
+
+**算法过程**
+
+莫队的精髓就在于，离线得到了一堆需要处理的区间后，合理的安排这些区间计算的次序以得到一个较优的复杂度。
+
+【序列莫队】
+
+对于一个询问区间$[l,r]$，如果我们可以$O(1)$或者$O(logn)$的得到区间$[l,r-1],[l,r+1],[l-1,r],[l+1,r]$的答案，那么从这个询问$[l,r]$转移到另一个询问$[l’,r’]$的时间复杂度为$O(|l-l’|+|r-r’|)$，既二维平面两点的曼哈顿距离。 连接所有点的最优方案为一棵树，那么整体的时间复杂度就是这棵树上所有曼哈顿距离之和。于是乎最优的复杂度肯定是这棵树是最小生成树的时候，也就是**曼哈顿距离最小生成树**。
+
+但是一般情况下不推荐直接使用曼哈顿距离最小生成树来解决问题，因为编码难度大，于是乎就出现了另外一种解决方案**分块**，我们先对序列分块，然后以*询问左端点所在的分块的序号为第一关键字*，*右端点的大小为第二关键字*进行排序，按照排序好的顺序计算，复杂度就会大大降低。
+
+- 分块相同时，右端点递增是$O(n)$的，分块共有$\sqrt(n)$个，复杂度为$O(n^{1.5})$
+- 分块转移时，右端点最多变化$n$，分块共有$\sqrt{n}$个，复杂度为$O(n^{1.5})$
+- 分块相同时，左端点最多变化$\sqrt{n}$，分块转移时，左端点最多变化$2\sqrt{n}$，共有个询$n$问，复杂度为$O(n^{1.5})$
+
+所有总时间复杂度就是$O(n^{1.5})$，若转移的复杂度是$O(logn)$的话，那么总时间复杂度就是$O(n^{1.5}*logn)$
+
+【树上莫队】
+
+树上莫队通常的解决方案是通过树分块来转移，或者先把树结构转化成序列结构(剖分、DFS序等)。
+
+【带修改莫队】
+
+带修改的莫队可以把询问看成一个三元组$(l,r,x)$表示在询问$[l,r]$之前进行了$x$次修改，同理知道了$(l,r,x)$我们就可以知道$(l+1,r,x),(l-1,r,x),(l,r+1,x),(l,r-1,x),(l,r,x+1),(l,r,x-1)$的情况。
+
+分块大小$S$为$n^{\frac{2}{3}}$，那么我们就有$n\frac{1}{3}$块。 
+原本的莫队关键字只有两个，一个是左边界，一个是右边界。而带修改莫队要再加上一维：在第几个操作之后。 
+我们按照这左边界所在块、右边界所在块以及第三关键字排序。 
+统计答案时多维护一个指针记录修改操作执行到哪里，移动时直接修改即可，如果在区间内还要计算其对答案的影响。 
+左指针移动次数：$O(n×n^{\frac{2}{3}})=O(n^{\frac{5}{3}})$。 
+右指针移动次数：$O(n×n^{\frac{2}{3}}+n^{\frac{1}{3}}×n)=O(n^{\frac{5}{3}})$。 
+修改指针移动：$O((n^{\frac{1}{3}})2×n)=O(n^{\frac{5}{3}})$。 
+因此总时间复杂度$O(n^{\frac{5}{3}})$。
+
+**推荐阅读**
+
+[莫队算法 Mo's Algorithm](https://zhuanlan.zhihu.com/p/25017840)
+
+[MO’s Algorithm (Query square root decomposition)](http://blog.anudeep2011.com/mos-algorithm/) 
+
+[算法讲堂-莫队](https://www.bilibili.com/video/av4291097/)
+
+2009年国家集训队-莫涛《小Z的袜子》[参见附件]
+
+MO’s Algorithm (Query square root decomposition)中文pdf[参见附件]
+
+**经典例题**
+
+[CodeForces - 86D Powerful array](http://codeforces.com/problemset/problem/86/D)
+
+题意：给定一个n个元素的序列，有m个询问，每个询问求区间[l,r]中每种数字X数字出现次数的平方的和。
+
+分析：莫队暴力转移，每次转移的时候最多只有一种数字在变化。
+
+代码：
+
+```c++
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+typedef long long int LL;
+const int MAX = 200000 + 24;
+const int MAXN = 1000000 + 24;
+struct Node {
+	int l, r, id, pos;
+	Node(int _l = 0, int _r = 0, int _id = 0, int _pos = 0) {
+		l = _l; r = _r; id = _id; pos = _pos;
+	}
+	bool operator <(const Node& a)const { //分块
+		return a.pos == pos ? r < a.r : pos < a.pos;
+	}
+}Q[MAX];
+LL ans[MAX], total[MAXN], cur; //答案，每种数字累计数目，当前区间答案
+int num[MAX]; //输入的序列
+void add(int x) { //添加一个数
+	cur += ((total[num[x]] << 1) + 1)*num[x]; 
+	total[num[x]]++;
+}
+void del(int x) { //删除一个数
+	total[num[x]]--;
+	cur -= ((total[num[x]] << 1) + 1)*num[x];
+}
+int main() {
+	int n, m;
+	while (~scanf("%d%d", &n, &m)){
+		cur = 0; memset(total, 0, sizeof(total));
+		int unit = (int)sqrt(n + 0.5); //分成sqrt(n)块
+		for (int i = 1; i <= n; i++){
+			scanf("%d", &num[i]);
+		}
+		for (int i = 1; i <= m; i++){
+			scanf("%d%d", &Q[i].l, &Q[i].r); //询问
+			Q[i].id = i;  //询问id
+			Q[i].pos = Q[i].l / unit;  //分块位置
+		}
+		sort(Q + 1, Q + 1 + m);
+		for (int i = 1, L = 1, R = 0; i <= m; i++){
+			while (L < Q[i].l) {
+				del(L); L++;
+			}
+			while (L > Q[i].l) {
+				L--; add(L);
+			}
+			while (R < Q[i].r) {
+				R++; add(R);
+			}
+			while (R > Q[i].r) {
+				del(R); R--;
+			}
+			ans[Q[i].id] = cur;
+		}
+		for (int i = 1; i <= m; i++) {
+			printf("%I64d\n", ans[i]);
+		}
+	}
+	return 0;
+}
+```
+
+### 分块算法
+
+**问题模型**
+
+分块算法同样是一种**优雅的暴力**，它可以在线的完成几乎所有区间更新和区间查询问题，但效率相对于线段树等数据结构要差一些。
+
+**算法过程**
+
+对于一个长度为$N$的序列，我们可以其将中的元素分为$M$个连续的子序列，既$M$块，每块的长度自然就为$\frac{N}{M}$。我们在更新一段区间$[l,r]$时，可以先更新$[l,l所在块的右端点]$和$[r所在块的左端点,r]$。即下图中红色的区域，每块中最多有$\frac{N}{M}$个元素，所以这一操作的复杂度的为$O(\frac{N}{M})$。
+
+![fenkuai-1](http://zjwer.umi.pw/wp-content/uploads/%E6%97%A0%E6%A0%87%E9%A2%98-300x67.png)
+
+然后我们在成段更新刚才更新的块中间的那些块（即上图中红色区域中间的那些块），这些块最多为$M$块，所以这一操作的复杂度为$M$。
+
+总操作的复杂度即为$O(M+\frac{N}{M})$，根据均值不等式可知，$M=\sqrt{n}$时复杂度最低。
+
+简单点来说，对于一个询问[l,r]，位于块外边的部分暴力处理，而属于一整块的部分统一维护，对于块内的处理通常可以与线段树一样进行打标记操作，或者使用别的数据结构来维护块内的元素。
+
+**推荐阅读**
+
+[算法讲堂-分块](https://www.bilibili.com/video/av6445624/)
+
+2013年集训队论文-罗剑桥《浅谈分块思想在一类数据处理问题中的应用》[参见附件]
+
+2014年集训队论文-王悦同《根号算法——不只是分块》[参见附件]
+
+2015年集训队论文-邹逍遥《浅谈分块在一类在线问题中的应用》[参见附件]
+
+**经典问题**
+
+[UESTC-1324 卿学姐与公主](http://acm.uestc.edu.cn/#/problem/show/1324)
+
+题意：单点更新，区间最大值。
+
+分析：对序列进行分块，每一块维护块内的最大值，块外暴力。
+
+代码：
+
+```c++
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+typedef long long int LL;
+const int MAX = 100000  + 24;
+//belong[i]:下标为i的元素属于哪一快；block：每块有多少个元素
+//num：一共有多少块；L[i]：第i块的左端点；R[i]:第i块的右端点
+int belong[MAX], block, num, L[MAX], R[MAX];
+LL value[MAX], maxv[MAX];
+void build(int n) {
+	block = (int)sqrt(n + 0.5); 
+	num = n / block; if (n%block) { num++; }
+	for (int i = 1; i <= num; i++) {
+		maxv[i] = 0;
+		L[i] = (i - 1)*block + 1; R[i] = i*block;
+	}
+	R[num] = n;
+	for (int i = 1; i <= n; i++) {
+		belong[i] = ((i - 1) / block) + 1;
+	}
+	for (int i = 1; i <= num; i++) { 
+		for (int k = L[i]; k <= R[i]; k++) {
+			value[i] = 0;
+		}
+	}
+}
+void Modify(int pos, int val) {
+	value[pos] += val;
+	maxv[belong[pos]] = max(maxv[belong[pos]], value[pos]);
+}
+int Query(int l, int r) {
+	LL answer = 0;
+	if (belong[l] == belong[r]) { //同一块，暴力
+		for (int i = l; i <= r; i++) { 
+			answer = max(answer, value[i]);
+		}
+		return answer;
+	}
+	for (int i = l; i <= R[belong[l]]; i++) { //左边块外，暴力
+		answer = max(answer, value[i]);
+	}
+	for (int i = belong[l] + 1; i < belong[r]; i++) { //块内单独维护
+		answer = max(answer, maxv[i]);
+	}
+	for (int i = L[belong[r]]; i <= r; i++) { //右边块外，暴力
+		answer = max(answer, value[i]);
+	}
+	return answer;
+}
+int main() {
+	int n,q;
+	while (~scanf("%d%d", &n, &q)) {
+		build(n);
+		for (int i = 1; i <= q; i++) {
+			int type, l, r;
+			scanf("%d%d%d", &type, &l, &r);
+			if (type == 1) {
+				Modify(l, r);
+			}else {
+				printf("%d\n", Query(l, r));
+			}
+		}
+	}
+	return 0;
+}
+```
 
 ### CDQ分治
 
+**算法模型**
+
+CDQ分治主要针对于数据结构题中时间维度上的优化，它能忽略问题中的操作顺序，把动态问题转化成静态,并且CDQ分治还能用于高维数据结构题目的降维，每套一层CDQ分治就降一维，但同时复杂度要多个log级别，对比编写高维数据结构来说，CDQ代码编写难度更低，同时常数更低。
+
+对于一个数据结构题而言（或者需要运用数据结构的地方），我们无非就是做两件**操作**，一是**修改**，二是**查询** 
+对于修改而言，有**插入**，**删除**，**变更（其实等价于删除再插入）**这几种方式 
+那么**查询**的本质是什么呢 ？我们思考所遇到过的数据结构题，可以发现查询实际上就在做一件事情： 
+把**符合本次查询的限制的修改**对答案产生的效果**合并**起来 
+满足这种**限制**通常表现为一种**序**的要求，并且这种序是广义的，符合限制的操作往往是按某种序（或多种序）排序后的操作的前缀 
+通常来说,查询一定有**时间**上的限制,也就是要求考虑发生在某个时刻之前的所有查询,对于一个问题而言,假如所有查询要求的发生时刻相同,那这就是一个静态查询问题,如果要求发生的时刻随着查询而变,那这就是一个动态修改问题,动态修改问题较静态查询而言复杂很多,往往需要高级数据结构,可持久化等手段,而静态查询简单很多,例如时间倒流,twopointers之类的方法都是很好的选择
+
+**算法过程**
+
+CDQ分治算法的核心就在于:去掉时间的限制,将所有查询要求发生的时刻同化,化动态修改为静态查询 
+(其实对于有些问题来说可以把某一维的限制通过排序看作时间限制然后运用CDQ分治) 
+我们记过程DivideConquer(l,r)表示处理完[l,r]内的修改对查询的影响 
+此时我们引入分治思想,将操作序列划分为[l,mid],[mid+1,r]两个区间 
+这两个区间内部的修改对区间内部的查询的影响是完全相同的子问题,我们递归处理 
+处理完之后剩下来只要考虑[l,mid]中的修改对[mid+1,r]中的查询的影响 
+这时我们发现这其实已经变成了一个静态查询问题,因为所有的查询都发生在修改之后,我们只需要考虑静态查询的问题如何处理即可
+
+**推荐阅读**
+
+AC_Aerolight-CDQ分治相关[参见附件]
+
+顾昱洲-浅谈一类分治算法[参见附件]
+
+陈丹琦-从《Cash》谈一类分治算法的应用[参见附件]
+
+2013年集训队论文答辩-许昊然《浅谈数据结构题的几个非经典解法》[参见附件]
+
+[整体二分与CDQ分治](http://blog.csdn.net/hbhcy98/article/details/50642773)
+
+**经典例题**
+
+[洛谷OJ-P3810 【模板】三维偏序](https://www.luogu.org/problemnew/show/P3810)
+
+题意：
+
+![CDQ-1](Image/CDQ分治-1.png)
+
+分析：我们知道二维偏序可以使用BIT求逆序对的方式求解，然而对于三维偏序，我们可以对1维排序，1维CDQ分治，1维数据结构维护的方式解决，那么我们将操作序列分为两半。显然，后一半的操作不会对前一半产生影响，后一半的询问只受前一半操作和后一半在询问前的操作的影响。这看起来像是可以递归，因为后一半操作序列的修改操作完全不会影响前一半操作序列中的询问结果,因此前一半操作序列的查询实际是与后一半操作序列完全独立的,是与原问题完全相同的子问题,可以递归处理。至此，一个动态修改题变为无动态修改操作的问题
+
+代码：
+
+```c++
+#include<iostream>
+#include<cstring>
+#include<string>
+#include<algorithm>
+#include<cstdio>
+#include<cmath>
+using namespace std;
+typedef long long int LL;
+const LL INF = 0x3f3f3f3f;
+const int MAXN = 1e5 + 24;
+const int MAXK = 2e5 + 24;
+struct Node {
+	int x, y, z, id, time;
+	Node(int _x = 0, int _y = 0, int _z = 0, int _id = 0) {
+		x = _x; y = _y; z = _z; id = _id;
+	}
+	bool operator <(const Node& a)const {
+		return x == a.x ? (y == a.y ? (z<a.z) : y<a.y) : x<a.x;
+	}
+}Q[MAXN], Q1[MAXN], Q2[MAXN];
+int ans[MAXN], cnt[MAXN];
+bool cmpy(Node a, Node b) {
+	return a.y == b.y ? (a.time<b.time) : a.y<b.y;
+}
+namespace BIT {
+	int C[MAXK], Size;
+	int lowbit(int x) { return x&(-x); }
+	void Init(int k) { Size = k; memset(C, 0, sizeof(C)); }
+	void Add(int pos, int val) {
+		for (int i = pos; i <= Size; i += lowbit(i)) { C[i] += val; }
+	}
+	int Sum(int pos) {
+		int res = 0;
+		for (int i = pos; i>0; i -= lowbit(i)) { res += C[i]; }
+		return res;
+	}
+};
+void CDQ(int l, int r) {
+	if (l >= r) { return; }
+	int mid = (l + r) >> 1, q1 = 0, q2 = 0;
+	for (int i = l; i <= r; i++) {
+		if (Q[i].time <= mid) {
+			Q1[q1++] = Q[i];
+		}
+		else {
+			Q2[q2++] = Q[i];
+		}
+	}
+	sort(Q + l, Q + r + 1, cmpy); //一维排序
+	for (int i = l; i <= r; i++) { //一维数据结构
+		if (Q[i].time <= mid) {
+			BIT::Add(Q[i].z, 1);
+		}
+		else {
+			ans[Q[i].id] += BIT::Sum(Q[i].z);
+		}
+	}
+	for (int i = l; i <= r; i++) { //还原
+		if (Q[i].time <= mid) {
+			BIT::Add(Q[i].z, -1);
+		}
+	}
+	for (int i = 0; i<q1; i++) {
+		Q[l + i] = Q1[i];
+	}
+	for (int i = 0; i<q2; i++) {
+		Q[l + q1 + i] = Q2[i];
+	}
+	CDQ(l, mid); CDQ(mid + 1, r); //一维CDQ分治
+}
+int main() {
+	int n, k;
+	while (~scanf("%d%d", &n, &k)) {
+		memset(ans, 0, sizeof(ans));
+		memset(cnt, 0, sizeof(cnt));
+		BIT::Init(k);
+		for (int i = 1; i <= n; i++) {
+			scanf("%d%d%d", &Q[i].x, &Q[i].y, &Q[i].z); Q[i].id = i;
+		}
+		sort(Q + 1, Q + 1 + n);
+		for (int i = 1; i <= n; i++) {
+			Q[i].time = i;
+		}
+		for (int i = n - 1, cnt = 0; i >= 1; i--) {
+			if (Q[i].x == Q[i + 1].x&&Q[i].y == Q[i + 1].y&&Q[i].z == Q[i + 1].z) {
+				cnt++;
+			}
+			else {
+				cnt = 0;
+			}
+			ans[Q[i].id] = cnt;
+		}
+		CDQ(1, n);
+		for (int i = 1; i <= n; i++) {
+			cnt[ans[i]]++;
+		}
+		for (int i = 0; i<n; i++) {
+			printf("%d\n", cnt[i]);
+		}
+	}
+	return 0;
+}
+```
+
+
+
 ### 整体二分
 
+**算法模型**
 
+整体二分解决的数据结构题需要满足：
+
+1，询问的答案具有可二分性
+
+2，**修改对判断的答案的贡献相互独立**，修改之间互不影响效果 
+
+3，修改如果对判定答案有贡献，则贡献为一确定的与判定标准无关的值
+
+4，贡献需要满足交换律，结合律，具有可加性
+
+5，**题目允许离线算法**
+
+**算法过程**
+
+对于单个查询而言，我们可以采用预处理+二分答案的方法解决，但往往我们要回答的是一系列的查询，对于每个查询而言我们都要重新预处理然后二分，时间复杂度无法承受，但是我们仍然希望通过二分答案的思想来解决，整体二分就是基于这样一种想法——我们将所有操作（包括修改和查询）一起二分，进行分治 ，整体二分具体的做法比较难理解
+
+![dv1](Image/整体二分-1.png)
+
+![dv-2](Image/整体二分-2.png)
+
+整体二分一类东西(CDQ分治)都比高维度数据结构快
+
+**推荐阅读**
+
+2013年国家集训队论文答辩-许昊然《浅谈数据结构题的几个非经典解法》 [参见附件]
+
+[整体二分初步](http://www.cnblogs.com/zig-zag/archive/2013/04/18/3027707.html)
+
+[CDQ分治与整体二分](http://blog.csdn.net/hbhcy98/article/details/50642773)
+
+**算法伪代码**
+
+```c++
+Divide_Conquer(Q, AL, AR)
+//Q是当前处理的操作序列
+//WANT是要求的贡献，CURRENT为已经累计的贡献(记录的是1~AL-1内所有修改的贡献)
+//[AL, AR]是询问的答案范围区间
+if AL = AR then
+    将Q中所有是询问操作的答案设为AL
+end if
+//我们二分答案,AM为当前的判定答案
+AM = (AL+AR) / 2
+//Solve是主处理函数,只考虑参数满足判定标准[AL, AM]的修改的贡献,因为CURRENT域中已经记录了[1,AL-1]的修改的贡献了,这一步是保证时间复杂度的关键,因为SOLVE只于当前Q的长度有关,而不与整个操作序列的长度有线性关系,这保证了主定理解出来只多一个log
+Solve(Q, AL, AM)
+//Solve之后Q中各个参数满足判定标准的修改对询问的贡献被存储在ANS数组
+//Q1,Q2为了两个临时数组，用于划分操作序列
+for i = 1 to Length(Q) do
+    if (Q[i].WANT <= Q[i].CURRENT + ANS[i]) then
+        //当前已有贡献不小于要求贡献,说明最终答案应当不大于判定答案
+        向数组Q1末尾添加Q[i]
+    else
+        //当前已有贡献小于要求贡献,说明最终答案应当大于判定答案
+        //这里是整体二分的关键,把当前贡献累计入总贡献,以后不再重复统计!
+        Q[i].CURRENT = Q[i].CURRENT + ANS[i]
+        向数组Q2末尾添加Q[i]
+    end if
+end for
+//分治,递归处理
+Divide_Conquer(Q1, AL, AM)
+Divide_Conquer(Q2, AM+1, AR)
+```
+
+**经典例题**
+
+[POJ-2104 K-th Number](http://poj.org/problem?id=2104)
+
+题意：单点更新，区间K小
+
+思路：我们时刻维护一个操作序列和对应的可能答案区间[AL,AR] 
+我们先求得一个判定答案AM=(AL+AR)/2 
+然后我们考虑操作序列的修改操作,将其中符合标准(例如参数<=AM)的修改对各个询问的贡献统计出来
+
+然后我们对操作序列进行划分 
+第一类操作是查询 
+如果当前查询累计贡献比要求贡献大,说明AM过大,满足标准的修改过多,我们需要给这中查询设置更小的答案区间来紧缩标准,于是将它划分到答案区间[AL,AM]中**(这种情况我们不改变查询的CURRENT域,保证了继续下一次分治时这些查询的CURRENT域还是累计的[1,AL−1]的修改的贡献)** 
+否则我们将当前已经统计到的贡献更新,将它划分到答案区间[AM+1,AR]**(这种情况下我们将[AL,AM]内的修改的贡献更新了CURRENT域,保证了下次继续分治时这些查询的CURRENT域已经保留的是[1,AM]的贡献了)** 
+第二类操作是修改 
+假如它符合当前的标准,已经被统计入了贡献,那么它对于答案区间是[AM+1,AR]的查询来说已经没有意义了(因为我们知道它一定会对这些查询产生贡献,并且我们已经累计了这种贡献到CURRENT域中),我们就把它划分到[AL,AM]的区间里, 
+对于不符合当前的标准,未被统计入贡献的修改来说,如果我们放宽标准,它仍然可能起贡献,然而我们并未统计这种贡献,因此对于[AM+1,AR]的区间来说它仍具有考虑的意义,我们把它划分到[AM+1,AR]中
+
+划分好了操作序列之后就继续分治递归下去就可以了 
+
+代码：
+
+```C++
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <queue>
+#include <cstring>
+#include <algorithm>
+#include <map>
+#include <string>
+#include <bitset>
+using namespace std;
+typedef long long LL;
+const int MAXN = 1e5 + 24;
+const int MAXQ = 5e3 + 24;
+const int INF = 1e9;
+int n, m, a[MAXN], ans[MAXN];
+
+//BIT
+LL c[MAXN];
+int lowbit(int x) { return x&-x; }
+void Modify(int x, int val) {
+	for (int i = x; i<MAXN; i += lowbit(i)) {
+		c[i] += val;
+	}
+}
+LL Sum(int x) {
+	LL res = 0;
+	for (int i = x; i>0; i -= lowbit(i)) {
+		res += c[i];
+	}
+	return res;
+}
+
+struct Query {
+	int l, r, k, type, id;
+	Query(int _l = 0, int _r = 0, int _k = 0, int _type = 0, int _id = 0) {
+		l = _l; r = _r; k = _k; type = _type; id = _id;
+	}
+}Q[MAXN + MAXQ], Q1[MAXN + MAXQ], Q2[MAXN + MAXQ];
+//Q1,Q2为划分询问时 临时存储的数组
+void Divide_And_Conquer(int QL, int QR, int AL, int AR) {
+	if (AL>AR) { return; }
+	if (AL == AR) {
+		for (int i = QL; i<QR; i++) {
+			if (Q[i].type == 1) { ans[Q[i].id] = AL; }
+		}
+		return;
+	}
+	int AM = (AL + AR) >> 1;
+	int p1 = 0, p2 = 0;
+	for (int i = QL; i<QR; i++) { //将询问分成2部分
+		if (!Q[i].type) { //修改操作
+			if (Q[i].l <= AM) {
+				Modify(Q[i].id, 1);
+				Q1[p1++] = Q[i];
+			}
+			else {
+				Q2[p2++] = Q[i];
+			}
+		}
+		else { //询问操作
+			int cur = Sum(Q[i].r) - Sum(Q[i].l - 1);
+			if (cur<Q[i].k) {
+				Q[i].k -= cur;
+				Q2[p2++] = Q[i];
+			}
+			else {
+				Q1[p1++] = Q[i];
+			}
+		}
+	}
+	for (int i = 0; i<p1; i++) { //对于右边部分的贡献已经计算过了
+		if (!Q1[i].type) { //但是左边部分还需要继续划分，所以还原修改
+			Modify(Q1[i].id, -1);
+		}
+	}
+	for (int i = 0; i<p1 + p2; i++) {
+		Q[i] = (i<p1 ? Q1[i] : Q2[i - p1]);
+	}
+	if (p1) { Divide_And_Conquer(0, p1, AL, AM); }
+	if (p2) { Divide_And_Conquer(p1, p1 + p2, AM + 1, AR); }
+}
+int main() {
+	while (~scanf("%d%d", &n, &m)) {
+		int p = 0;
+		memset(c, 0, sizeof(c));
+		for (int i = 1; i <= n; i++) {
+			scanf("%d", &a[i]);
+			Q[p++] = Query(a[i], 0, 0, 0, i);
+		}
+		for (int i = 1; i <= m; i++) {
+			int l, r, k;
+			scanf("%d%d%d", &l, &r, &k);
+			Q[p++] = Query(l, r, k, 1, i);
+		}
+		Divide_And_Conquer(0, p, -INF, INF);
+		for (int i = 1; i <= m; i++) {
+			printf("%d\n", ans[i]);
+		}
+	}
+	return 0;
+}
+```
 
 ## 其他技巧
 
@@ -1998,7 +2615,7 @@ $Fail$树是$AC$自动机的扩展，在学习$Fail$树前需要具备的前置�
 
 ### 启发式合并
 
-### 树套树
+### DFS序
 
 
 
